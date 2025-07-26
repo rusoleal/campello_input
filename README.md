@@ -5,7 +5,7 @@
 | OS | Underline API | Status |
 |----|---------------|--------|
 | Windows/Xbox | GameInput 0.x API | In progress |
-| macOS/iOS/ipadOS | Game Controller | In progress |
+| macOS/iOS/ipadOS/tvOS | Game Controller | In progress |
 | Android | Game Controller Library (part of AGDK) | In progress |
 | Linux | evdev interface | Freezed |
 | Nintendo | ? | Freezed |
