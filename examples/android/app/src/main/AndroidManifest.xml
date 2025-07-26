@@ -22,7 +22,7 @@
 
             <meta-data
                 android:name="android.app.lib_name"
-                android:value="campello_input" />
+                android:value="example" />
         </activity>
     </application>
 

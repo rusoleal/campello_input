@@ -3,11 +3,17 @@
 
 cmake_minimum_required(VERSION 3.22.1)
 
-project("campello_input")
+project("example")
+
+include(${PROJECT_SOURCE_DIR}/campello_input.cmake)
+set(DEPENDENCIES
+        ${DEPENDENCIES}
+        campello_input
+)
 
 # Creates your game shared library. The name must be the same as the
 # one used for loading in your Kotlin/Java or AndroidManifest.txt files.
-add_library(campello_input SHARED
+add_library(example SHARED
         main.cpp
         AndroidOut.cpp
         Renderer.cpp
@@ -19,7 +25,7 @@ add_library(campello_input SHARED
 find_package(game-activity REQUIRED CONFIG)
 
 # Configure libraries CMake uses to link your target library.
-target_link_libraries(campello_input
+target_link_libraries(example
         # The game activity
         game-activity::game-activity
 
@@ -29,4 +35,6 @@ target_link_libraries(campello_input
         GLESv3
         jnigraphics
         android
-        log)
+        log
+        ${DEPENDENCIES}
+)
