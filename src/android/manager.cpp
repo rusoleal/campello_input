@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2025 Ruben Leal Mirete
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 #include <android/log.h>
 #include <android/input.h>
 #include <game-activity/native_app_glue/android_native_app_glue.h>
@@ -64,11 +86,12 @@ void Manager::processData(void *pd) {
     for (auto i = 0; i < inputBuffer->motionEventsCount; i++) {
         auto &motionEvent = inputBuffer->motionEvents[i];
         auto action = motionEvent.action;
+        motionEvent.source
 
         // Find the pointer index, mask and bitshift to turn it into a readable value.
         auto pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK)
                 >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
-        __android_log_print(ANDROID_LOG_DEBUG, "campello_input", "Pointer(s)");
+        __android_log_print(ANDROID_LOG_DEBUG, "campello_input", "Pointer index: %d device.id: %d", pointerIndex, motionEvent.deviceId);
         //aout << "Pointer(s): ";
 
         // get the x and y position of this event if it is not ACTION_MOVE.
@@ -100,6 +123,7 @@ void Manager::processData(void *pd) {
                     pointer = motionEvent.pointers[index];
                     x = GameActivityPointerAxes_getX(&pointer);
                     y = GameActivityPointerAxes_getY(&pointer);
+                    __android_log_print(ANDROID_LOG_DEBUG, "campello_input", "id: %d %f %f", pointer.id, x,y);
                     //aout << "(" << pointer.id << ", " << x << ", " << y << ")";
 
                     //if (index != (motionEvent.pointerCount - 1)) aout << ",";
