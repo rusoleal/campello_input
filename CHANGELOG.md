@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux Force Feedback (haptics) support
 - Controller database for automatic mappings
 
+## [0.2.0] - 2026-03-27
+
+### Added
+
+#### Examples
+- **Windows example** (`examples/windows/`) - Native Win32 GUI input monitor
+- **iOS example** (`examples/ios/`) - UIKit-based input monitor with touch support
+
+### Changed
+- **C++ Standard**: Upgraded from C++17 to C++20
+  - Minimum compiler requirements: GCC 10+, Clang 10+, MSVC 2019+
+  - All existing code remains compatible
+  - Enables future use of concepts, ranges, and other C++20 features
+
 ## [0.1.0] - 2026-03-27
 
 ### Added
@@ -78,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Manager API (deprecated)
 - Initial build system
 
-[Unreleased]: https://github.com/rubenleal/campello_input/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/rubenleal/campello_input/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/rubenleal/campello_input/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rubenleal/campello_input/compare/v0.0.13...v0.1.0
 [0.0.13]: https://github.com/rubenleal/campello_input/releases/tag/v0.0.13

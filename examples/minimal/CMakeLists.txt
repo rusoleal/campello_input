@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(minimal_example VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find campello_input - in real usage, this would be installed on the system
@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
 # In your own project, you would use:
-# find_package(campello_input 0.1.0 REQUIRED)
+# find_package(campello_input 0.2.0 REQUIRED)
 # target_link_libraries(minimal_example campello_input::campello_input)
 
 # For this example, we build from the parent directory

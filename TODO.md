@@ -1,6 +1,6 @@
 # campello_input - Production Readiness TODO
 
-> Version: 0.1.0  
+> Version: 0.2.0  
 > Last updated: 2026-03-27
 
 ## Current Status
@@ -18,7 +18,7 @@
 
 ## Summary
 
-This is a cross-platform C++17 game input library supporting gamepads, keyboards, mice, touch, and haptics. All major desktop and mobile platforms are now fully implemented.
+This is a cross-platform C++20 game input library supporting gamepads, keyboards, mice, touch, and haptics. All major desktop and mobile platforms are now fully implemented.
 
 ## Architecture Philosophy
 
@@ -104,7 +104,7 @@ while (running) {
 - ✅ Add install target to CMake (GNUInstallDirs, export targets)
 - ✅ Create package config files for CMake find_package support
 - ✅ Add version compatibility checking (SOVERSION for shared libs)
-- ⏳ Compiler feature detection for C++17 optional features (future)
+- ⏳ Compiler feature detection for C++20 optional features (future)
 - ⏳ Sanitizer options (ASan, UBSan, TSan) for debug builds (future)
 - ✅ Fix SHARED vs STATIC library selection (platform-specific defaults)
 - ⏳ Unity build support option for faster compilation (future)
