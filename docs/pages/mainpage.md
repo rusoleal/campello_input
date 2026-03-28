@@ -1,6 +1,6 @@
 # campello_input
 
-**Version 0.2.0** | [GitHub Repository](https://github.com/rubenleal/campello_input)
+**Version 0.2.1** | [GitHub Repository](https://github.com/rubenleal/campello_input)
 
 A cross-platform C++20 game input library supporting gamepads, keyboards, mice, touch, and haptics on macOS, iOS, Android, Windows, and Linux.
 
@@ -68,7 +68,7 @@ include(FetchContent)
 FetchContent_Declare(
     campello_input
     GIT_REPOSITORY https://github.com/rubenleal/campello_input.git
-    GIT_TAG v0.2.0
+    GIT_TAG v0.2.1
 )
 FetchContent_MakeAvailable(campello_input)
 

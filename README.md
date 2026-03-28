@@ -1,6 +1,6 @@
 # campello_input
 
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A cross-platform C++20 game input library supporting gamepads, keyboards, mice, touch, and haptics on macOS, iOS, Android, Windows, Linux, and game consoles.

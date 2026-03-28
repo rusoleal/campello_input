@@ -58,7 +58,7 @@ std::string FormatFloat(float value, int precision = 2) {
 
 // Draw text helper
 void DrawText(HDC hdc, int x, int y, const std::string& text, COLORREF color, int fontSize = 14) {
-    HFONT font = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    HFONT font = CreateFontW(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                             DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
                             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
     HFONT oldFont = (HFONT)SelectObject(hdc, font);
@@ -75,7 +75,7 @@ void DrawText(HDC hdc, int x, int y, const std::string& text, COLORREF color, in
 
 // Draw centered text
 void DrawTextCentered(HDC hdc, int x, int y, int width, const std::string& text, COLORREF color, int fontSize = 14) {
-    HFONT font = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+    HFONT font = CreateFontW(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
                             DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS,
                             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
     HFONT oldFont = (HFONT)SelectObject(hdc, font);
@@ -342,23 +342,23 @@ void DrawMouseSection(HDC hdc, int x, int y, int width, int height) {
     // Position info
     int infoY = y + 35;
     DrawText(hdc, x + 20, infoY, 
-             "Position: (" + std::to_string(state.pos_x) + ", " + std::to_string(state.pos_y) + ")",
+             "Position: (" + std::to_string(state.x) + ", " + std::to_string(state.y) + ")",
              COLOR_TEXT, 12);
     DrawText(hdc, x + 20, infoY + 20,
-             "Delta: (" + std::to_string(state.delta_x) + ", " + std::to_string(state.delta_y) + ")",
+             "Delta: (" + std::to_string(state.deltaX) + ", " + std::to_string(state.deltaY) + ")",
              COLOR_TEXT, 12);
     DrawText(hdc, x + 20, infoY + 40,
-             "Scroll: (" + FormatFloat(state.scroll_delta_x) + ", " + FormatFloat(state.scroll_delta_y) + ")",
+             "Scroll: (" + FormatFloat(state.scrollX) + ", " + FormatFloat(state.scrollY) + ")",
              COLOR_TEXT, 12);
     
     // Buttons
     int btnY = infoY + 70;
     DrawButton(hdc, x + 20, btnY, 60, 40, "Left", 
-               state.buttons & (uint32_t)MouseButton::left);
+               state.buttons & (1u << (uint32_t)MouseButton::left));
     DrawButton(hdc, x + 90, btnY, 60, 40, "Right",
-               state.buttons & (uint32_t)MouseButton::right);
+               state.buttons & (1u << (uint32_t)MouseButton::right));
     DrawButton(hdc, x + 160, btnY, 60, 40, "Middle",
-               state.buttons & (uint32_t)MouseButton::middle);
+               state.buttons & (1u << (uint32_t)MouseButton::middle));
 }
 
 // Window procedure
@@ -373,13 +373,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
             
-            // Clear background
-            FillRect(hdc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, COLOR_BG);
+            // Create memory DC for double buffering (prevents flickering)
+            HDC memDC = CreateCompatibleDC(hdc);
+            HBITMAP memBitmap = CreateCompatibleBitmap(hdc, WINDOW_WIDTH, WINDOW_HEIGHT);
+            HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
+            
+            // Clear background in memory buffer
+            FillRect(memDC, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, COLOR_BG);
             
             // Title
-            DrawTextCentered(hdc, 0, 10, WINDOW_WIDTH, 
+            DrawTextCentered(memDC, 0, 10, WINDOW_WIDTH, 
                              "campello_input - Windows Example", COLOR_HEADER, 24);
-            DrawTextCentered(hdc, 0, 40, WINDOW_WIDTH,
+            DrawTextCentered(memDC, 0, 40, WINDOW_WIDTH,
                              "Press ESC to exit", COLOR_TEXT, 12);
             
             if (g_input) {
@@ -394,34 +399,38 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 
                 // Layout sections
                 int sectionY = 70;
-                int sectionHeight = 250;
                 int padding = 20;
                 int availableWidth = WINDOW_WIDTH - 2 * padding;
-                int gamepadWidth = availableWidth / 2;
                 
-                // Gamepad 0 (left)
-                DrawGamepadSection(hdc, padding, sectionY, gamepadWidth - padding, 0);
-                
-                // Gamepad 1 (right, if exists)
-                if (g_input->gamepadCount() > 1) {
-                    DrawGamepadSection(hdc, padding + gamepadWidth, sectionY, 
-                                       gamepadWidth - padding, 1);
-                } else {
-                    // Show keyboard/mouse on right
-                    DrawKeyboardSection(hdc, padding + gamepadWidth, sectionY, 
+                if (g_input->gamepadCount() > 0) {
+                    // Show gamepad(s) on left, keyboard/mouse on right
+                    int gamepadWidth = availableWidth / 2;
+                    
+                    // Gamepad 0 (left)
+                    DrawGamepadSection(memDC, padding, sectionY, gamepadWidth - padding, 0);
+                    
+                    // Keyboard/mouse (right)
+                    DrawKeyboardSection(memDC, padding + gamepadWidth, sectionY, 
                                         gamepadWidth - padding, 150);
-                    DrawMouseSection(hdc, padding + gamepadWidth, sectionY + 160,
+                    DrawMouseSection(memDC, padding + gamepadWidth, sectionY + 160,
                                      gamepadWidth - padding, 90);
-                }
-                
-                // If no gamepads, show keyboard/mouse larger
-                if (g_input->gamepadCount() == 0) {
-                    DrawKeyboardSection(hdc, padding, sectionY, 
-                                        availableWidth / 2 - padding, 150);
-                    DrawMouseSection(hdc, availableWidth / 2 + padding, sectionY,
-                                     availableWidth / 2 - padding, 150);
+                } else {
+                    // No gamepads - show keyboard/mouse larger, centered
+                    int sectionWidth = availableWidth / 2;
+                    DrawKeyboardSection(memDC, padding, sectionY, 
+                                        sectionWidth, 150);
+                    DrawMouseSection(memDC, padding + sectionWidth + 20, sectionY,
+                                     sectionWidth - 20, 150);
                 }
             }
+            
+            // Copy from memory DC to screen DC (single blit - no flicker)
+            BitBlt(hdc, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, memDC, 0, 0, SRCCOPY);
+            
+            // Cleanup
+            SelectObject(memDC, oldBitmap);
+            DeleteObject(memBitmap);
+            DeleteDC(memDC);
             
             EndPaint(hwnd, &ps);
             return 0;

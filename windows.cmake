@@ -1,33 +1,41 @@
 
 # Windows/Xbox GDK platform using GameInput API
 
-set(PLATFORM_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/gdk/device.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/gdk/input_gdk_system.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/gdk/gamepad_gdk.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/gdk/keyboard_gdk.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/gdk/mouse_gdk.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/gdk/haptics_gdk.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/input_system.cpp
+add_library(${PROJECT_NAME} STATIC
+    src/gdk/device.cpp
+    src/gdk/input_gdk_system.cpp
+    src/gdk/gamepad_gdk.cpp
+    src/gdk/keyboard_gdk.cpp
+    src/gdk/mouse_gdk.cpp
+    src/gdk/haptics_gdk.cpp
+    src/input_system.cpp
 )
 
-set(PLATFORM_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/gdk/inc
+# Set library versioning
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VERSION ${PROJECT_VERSION}
 )
 
-set(PLATFORM_LIBRARIES
+target_link_libraries(${PROJECT_NAME}
     GameInput
 )
 
-set(PLATFORM_DEFS
-    CAMPHELLO_INPUT_GDK
-    NOMINMAX  # Prevent Windows headers from defining min/max macros
-    WIN32_LEAN_AND_MEAN
+target_include_directories(${PROJECT_NAME} PUBLIC
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>"
 )
 
-list(APPEND INPUT_SOURCES ${PLATFORM_SOURCES})
-list(APPEND INPUT_INCLUDE_DIRS ${PLATFORM_INCLUDE_DIRS})
-list(APPEND INPUT_LIBRARIES ${PLATFORM_LIBRARIES})
-list(APPEND INPUT_DEFS ${PLATFORM_DEFS})
+target_include_directories(${PROJECT_NAME} PRIVATE
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/gdk/inc>"
+)
+
+target_include_directories(${PROJECT_NAME} PUBLIC
+    "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>"
+)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    CAMPHELLO_INPUT_GDK
+    NOMINMAX
+    WIN32_LEAN_AND_MEAN
+)
 
 message(STATUS "Windows/Xbox input: Using GameInput API (GDK)")

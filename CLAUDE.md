@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`campello_input` is a cross-platform C++20 game input library (version 0.2.0). It abstracts platform-specific input APIs behind a unified interface in the `systems::leal::campello_input` namespace. The project is in early development.
+`campello_input` is a cross-platform C++20 game input library (version 0.2.1). It abstracts platform-specific input APIs behind a unified interface in the `systems::leal::campello_input` namespace. The project is in early development.
 
 ## Build
 

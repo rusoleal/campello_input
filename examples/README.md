@@ -197,7 +197,7 @@ include(FetchContent)
 FetchContent_Declare(
     campello_input
     GIT_REPOSITORY https://github.com/yourusername/campello_input.git
-    GIT_TAG v0.2.0
+    GIT_TAG v0.2.1
 )
 FetchContent_MakeAvailable(campello_input)
 
@@ -214,7 +214,7 @@ cmake --build build --target install
 Then in your CMake:
 
 ```cmake
-find_package(campello_input 0.2.0 REQUIRED)
+find_package(campello_input 0.2.1 REQUIRED)
 target_link_libraries(your_target campello_input::campello_input)
 ```
 

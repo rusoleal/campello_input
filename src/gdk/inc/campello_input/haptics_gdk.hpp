@@ -25,31 +25,21 @@
 #include <campello_input/haptics.hpp>
 
 // Forward declarations for GameInput
-struct IGameInputRumbleDevice;
 struct IGameInputDevice;
 
 namespace systems::leal::campello_input {
 
     // GdkHaptics - Windows/Xbox GDK GameInput haptics implementation
     //
-    // This is an internal class. Access via GamepadDevice::haptics() on Windows/Xbox.
+    // Note: This is currently a stub implementation. The GameInput API in the
+    // current Windows SDK doesn't expose the haptics/rumble interfaces that
+    // were used in the original implementation.
     //
-    // Supports:
-    // - Simple rumble (low/high frequency motors)
-    // - Trigger rumble (Xbox Series X|S controllers)
-    //
-    // Note: Haptics capabilities depend on the controller hardware.
-    // Xbox controllers support full rumble + trigger feedback.
-    // Standard PC gamepads may only support simple rumble.
+    // Future implementations could use:
+    // - RawDeviceReport API to send rumble commands directly
+    // - Force Feedback API (IGameInputForceFeedbackDevice) if available
     class GdkHaptics : public Haptics {
-        IGameInputRumbleDevice* _rumbleDevice = nullptr;
         IGameInputDevice* _device = nullptr;
-        HapticsCapability _capabilities = HapticsCapability::none;
-        bool _initialized = false;
-
-        // Current rumble state
-        float _currentLowFreq = 0.0f;
-        float _currentHighFreq = 0.0f;
 
     public:
         explicit GdkHaptics(IGameInputDevice* device);
@@ -62,19 +52,14 @@ namespace systems::leal::campello_input {
         // Initialize haptics for the device
         bool initialize();
 
-        // Haptics interface
-        bool supports(HapticsCapability capability) const noexcept override;
+        // Haptics interface - all return "not supported"
+        [[nodiscard]] HapticsCapability capabilities() const noexcept override;
         
-        bool playRumble(float lowFreqIntensity, float highFreqIntensity, 
-                       uint32_t durationMs) override;
-        bool stopRumble() override;
+        [[nodiscard]] bool setRumble(const RumbleEffect& effect) override;
+        [[nodiscard]] bool stopRumble() override;
         
-        bool playTriggerEffect(TriggerEffect effect, TriggerIntensity intensity,
-                              uint32_t durationMs) override;
-        bool stopTriggerEffect(bool isLeftTrigger) override;
-
-    private:
-        void checkCapabilities();
+        [[nodiscard]] bool setTriggerEffect(bool leftTrigger, const TriggerEffect& effect) override;
+        [[nodiscard]] bool stopTriggerEffect(bool leftTrigger) override;
     };
 
 } // namespace systems::leal::campello_input

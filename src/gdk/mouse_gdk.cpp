@@ -23,20 +23,9 @@
 #include "inc/campello_input/mouse_gdk.hpp"
 #include <GameInput.h>
 #include <cstring>
+#include <string>
 
 using namespace systems::leal::campello_input;
-
-// Map GameInput mouse buttons to MouseButton
-static MouseButton gameInputButtonToMouseButton(uint32_t buttonIndex) {
-    switch (buttonIndex) {
-        case 0: return MouseButton::left;
-        case 1: return MouseButton::right;
-        case 2: return MouseButton::middle;
-        case 3: return MouseButton::extra_1;
-        case 4: return MouseButton::extra_2;
-        default: return MouseButton::left;
-    }
-}
 
 GdkMouse::GdkMouse(uint32_t id, IGameInputDevice* device)
     : _id(id)
@@ -59,8 +48,8 @@ bool GdkMouse::initialize() {
     
     // Get device info for name
     const GameInputDeviceInfo* info = _device->GetDeviceInfo();
-    if (info && info->displayName) {
-        _name = info->displayName;
+    if (info && info->displayName && info->displayName->data) {
+        _name = std::string(info->displayName->data, info->displayName->sizeInBytes);
     } else {
         _name = "Mouse " + std::to_string(_id);
     }
@@ -76,37 +65,47 @@ void GdkMouse::updateState(IGameInputReading* reading) {
     if (!reading->GetMouseState(&mouseState)) return;
     
     // Update position
-    int32_t newX = static_cast<int32_t>(mouseState.positionX);
-    int32_t newY = static_cast<int32_t>(mouseState.positionY);
+    float newX = static_cast<float>(mouseState.positionX);
+    float newY = static_cast<float>(mouseState.positionY);
     
     // Calculate delta
     if (_hasLastPos) {
-        _state.delta_x = newX - _lastX;
-        _state.delta_y = newY - _lastY;
+        _state.deltaX = newX - _lastX;
+        _state.deltaY = newY - _lastY;
     } else {
-        _state.delta_x = 0;
-        _state.delta_y = 0;
+        _state.deltaX = 0;
+        _state.deltaY = 0;
         _hasLastPos = true;
     }
     
     _lastX = newX;
     _lastY = newY;
-    _state.pos_x = newX;
-    _state.pos_y = newY;
+    _state.x = newX;
+    _state.y = newY;
     
     // Update wheel
-    _state.scroll_delta_x = mouseState.wheelX;
-    _state.scroll_delta_y = mouseState.wheelY;
+    _state.scrollX = static_cast<float>(mouseState.wheelX);
+    _state.scrollY = static_cast<float>(mouseState.wheelY);
     
-    // Update buttons
+    // Update buttons - GameInputMouseButtons uses bit flags
+    // Map directly to our MouseButton bit positions
     _state.buttons = 0;
-    uint32_t buttonCount = mouseState.buttonCount;
-    if (buttonCount > 5) buttonCount = 5;  // Max 5 buttons supported
+    uint32_t buttons = static_cast<uint32_t>(mouseState.buttons);
     
-    for (uint32_t i = 0; i < buttonCount; ++i) {
-        if (mouseState.buttons[i]) {
-            _state.buttons |= static_cast<uint32_t>(gameInputButtonToMouseButton(i));
-        }
+    if (buttons & GameInputMouseLeftButton) {
+        _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::left));
+    }
+    if (buttons & GameInputMouseRightButton) {
+        _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::right));
+    }
+    if (buttons & GameInputMouseMiddleButton) {
+        _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::middle));
+    }
+    if (buttons & GameInputMouseButton4) {
+        _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::extra1));
+    }
+    if (buttons & GameInputMouseButton5) {
+        _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::extra2));
     }
     
     // Update timestamp
@@ -118,7 +117,7 @@ void GdkMouse::getState(MouseState& outState) const {
 }
 
 bool GdkMouse::isButtonDown(MouseButton button) const noexcept {
-    return (_state.buttons & static_cast<uint32_t>(button)) != 0;
+    return (_state.buttons & (1u << static_cast<uint32_t>(button))) != 0;
 }
 
 void GdkMouse::setCursorLocked(bool locked) {
@@ -128,8 +127,8 @@ void GdkMouse::setCursorLocked(bool locked) {
 }
 
 void GdkMouse::resetDeltas() {
-    _state.delta_x = 0;
-    _state.delta_y = 0;
-    _state.scroll_delta_x = 0.0f;
-    _state.scroll_delta_y = 0.0f;
+    _state.deltaX = 0;
+    _state.deltaY = 0;
+    _state.scrollX = 0.0f;
+    _state.scrollY = 0.0f;
 }

@@ -23,15 +23,13 @@
 #include "inc/campello_input/keyboard_gdk.hpp"
 #include <GameInput.h>
 #include <cstring>
+#include <string>
 
 using namespace systems::leal::campello_input;
 
 // Map GameInput scan codes to KeyCode
 // GameInput uses USB HID usage page 0x07 (same as our KeyCode)
 static KeyCode gameInputScanCodeToKeyCode(uint32_t scanCode) {
-    // GameInput scan codes are USB HID usage codes
-    // Our KeyCode enum is also USB HID based
-    
     switch (scanCode) {
         // Letters
         case 0x04: return KeyCode::a;
@@ -162,8 +160,8 @@ bool GdkKeyboard::initialize() {
     
     // Get device info for name
     const GameInputDeviceInfo* info = _device->GetDeviceInfo();
-    if (info && info->displayName) {
-        _name = info->displayName;
+    if (info && info->displayName && info->displayName->data) {
+        _name = std::string(info->displayName->data, info->displayName->sizeInBytes);
     } else {
         _name = "Keyboard " + std::to_string(_id);
     }
@@ -174,47 +172,52 @@ bool GdkKeyboard::initialize() {
 void GdkKeyboard::updateState(IGameInputReading* reading) {
     if (!reading) return;
     
-    // Get keyboard state
-    GameInputKeyState keyState;
-    uint32_t stateCount = 1;
-    
-    if (!reading->GetKeyState(stateCount, &keyState)) return;
-    
-    // Clear current state
+    // Clear current state before updating
     _state = KeyboardState{};
     
-    // Process each key in the state
-    for (uint32_t i = 0; i < keyState.scanCodeCount && i < 16; ++i) {
-        uint32_t scanCode = keyState.scanCodes[i];
-        KeyCode code = gameInputScanCodeToKeyCode(scanCode);
-        
+    // GameInput can return multiple key states in a single reading
+    // GetKeyState returns the number of keys actually returned
+    GameInputKeyState keyStates[16];
+    uint32_t requestedCount = 16;
+    
+    uint32_t actualCount = reading->GetKeyState(requestedCount, keyStates);
+    
+    // Process all keys returned in the reading
+    for (uint32_t i = 0; i < actualCount; ++i) {
+        KeyCode code = gameInputScanCodeToKeyCode(keyStates[i].scanCode);
         if (code != KeyCode::unknown) {
             uint32_t idx = static_cast<uint32_t>(code);
             _state.keysDown[idx >> 6] |= 1ULL << (idx & 63);
+            
+            // Track modifiers based on key presses
+            switch (code) {
+                case KeyCode::shift_left:
+                case KeyCode::shift_right:
+                    _state.modifiers = _state.modifiers | KeyModifier::shift;
+                    break;
+                case KeyCode::ctrl_left:
+                case KeyCode::ctrl_right:
+                    _state.modifiers = _state.modifiers | KeyModifier::ctrl;
+                    break;
+                case KeyCode::alt_left:
+                case KeyCode::alt_right:
+                    _state.modifiers = _state.modifiers | KeyModifier::alt;
+                    break;
+                case KeyCode::meta_left:
+                case KeyCode::meta_right:
+                    _state.modifiers = _state.modifiers | KeyModifier::meta;
+                    break;
+                case KeyCode::caps_lock:
+                    _state.modifiers = _state.modifiers | KeyModifier::caps_lock;
+                    break;
+                case KeyCode::num_lock:
+                    _state.modifiers = _state.modifiers | KeyModifier::num_lock;
+                    break;
+                default:
+                    break;
+            }
         }
     }
-    
-    // Update modifiers from key state
-    KeyModifier mods = KeyModifier::none;
-    if (keyState.modifiers & GameInputModifierShift) {
-        mods = mods | KeyModifier::shift;
-    }
-    if (keyState.modifiers & GameInputModifierControl) {
-        mods = mods | KeyModifier::ctrl;
-    }
-    if (keyState.modifiers & GameInputModifierAlt) {
-        mods = mods | KeyModifier::alt;
-    }
-    if (keyState.modifiers & GameInputModifierWindows) {
-        mods = mods | KeyModifier::meta;
-    }
-    if (keyState.modifiers & GameInputModifierCapsLock) {
-        mods = mods | KeyModifier::caps_lock;
-    }
-    if (keyState.modifiers & GameInputModifierNumLock) {
-        mods = mods | KeyModifier::num_lock;
-    }
-    _state.modifiers = mods;
 }
 
 bool GdkKeyboard::isKeyDown(KeyCode code) const noexcept {

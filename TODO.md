@@ -1,6 +1,6 @@
 # campello_input - Production Readiness TODO
 
-> Version: 0.2.0  
+> Version: 0.2.1  
 > Last updated: 2026-03-27
 
 ## Current Status

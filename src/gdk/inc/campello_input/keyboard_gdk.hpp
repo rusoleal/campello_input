@@ -42,7 +42,7 @@ namespace systems::leal::campello_input {
 
     public:
         GdkKeyboard(uint32_t id, IGameInputDevice* device);
-        ~GdkKeyboard() override = default;
+        ~GdkKeyboard() override;
 
         // Disable copy/move
         GdkKeyboard(const GdkKeyboard&) = delete;

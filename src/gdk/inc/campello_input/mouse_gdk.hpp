@@ -48,7 +48,7 @@ namespace systems::leal::campello_input {
 
     public:
         GdkMouse(uint32_t id, IGameInputDevice* device);
-        ~GdkMouse() override = default;
+        ~GdkMouse() override;
 
         // Disable copy/move
         GdkMouse(const GdkMouse&) = delete;

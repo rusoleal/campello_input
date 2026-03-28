@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linux Force Feedback (haptics) support
 - Controller database for automatic mappings
 
+## [0.2.1] - 2026-03-28
+
+### Fixed
+
+#### Windows/GDK Platform
+- **CMake build**: Fixed `windows.cmake` missing library target creation
+- **Mouse button mapping**: Fixed incorrect button detection using explicit GameInput flags
+  - `GameInputMouseLeftButton` → `MouseButton::left`
+  - `GameInputMouseRightButton` → `MouseButton::right`
+  - `GameInputMouseMiddleButton` → `MouseButton::middle`
+- **Keyboard input**: Fixed `GetKeyState` return type (returns count, not bool)
+- **Aggregate input devices**: Implemented `AggregateKeyboard` and `AggregateMouse`
+  - Keyboard and mouse now always report as connected
+  - Receive input from any system keyboard/mouse via aggregate mode
+  - No longer require device enumeration (which GameInput doesn't support for keyboards/mice)
+
+#### Windows Example
+- **Flickering**: Implemented double buffering in WM_PAINT
+- **Mouse buttons**: Fixed bit mask check (`buttons & (1 << MouseButton)`)
+- **Duplicate UI**: Fixed layout logic drawing elements twice
+- **Field names**: Updated to match public API (`x` instead of `pos_x`, etc.)
+
 ## [0.2.0] - 2026-03-27
 
 ### Added
@@ -92,7 +114,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy Manager API (deprecated)
 - Initial build system
 
-[Unreleased]: https://github.com/rubenleal/campello_input/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/rubenleal/campello_input/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/rubenleal/campello_input/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/rubenleal/campello_input/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rubenleal/campello_input/compare/v0.0.13...v0.1.0
 [0.0.13]: https://github.com/rubenleal/campello_input/releases/tag/v0.0.13

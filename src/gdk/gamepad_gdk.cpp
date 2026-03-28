@@ -24,6 +24,7 @@
 #include "inc/campello_input/haptics_gdk.hpp"
 #include <GameInput.h>
 #include <cstring>
+#include <string>
 
 using namespace systems::leal::campello_input;
 
@@ -69,8 +70,8 @@ bool GdkGamepad::initialize() {
     
     // Get device info for name
     const GameInputDeviceInfo* info = _device->GetDeviceInfo();
-    if (info && info->displayName) {
-        _name = info->displayName;
+    if (info && info->displayName && info->displayName->data) {
+        _name = std::string(info->displayName->data, info->displayName->sizeInBytes);
     } else {
         _name = "Gamepad " + std::to_string(_id);
     }

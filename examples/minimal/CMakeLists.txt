@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(FetchContent)
 
 # In your own project, you would use:
-# find_package(campello_input 0.2.0 REQUIRED)
+# find_package(campello_input 0.2.1 REQUIRED)
 # target_link_libraries(minimal_example campello_input::campello_input)
 
 # For this example, we build from the parent directory

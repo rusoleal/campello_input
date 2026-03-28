@@ -25,11 +25,337 @@
 #include "inc/campello_input/keyboard_gdk.hpp"
 #include "inc/campello_input/mouse_gdk.hpp"
 
+#include <campello_input/device.hpp>
+
 #include <GameInput.h>
 #include <algorithm>
 #include <cstring>
+#include <vector>
 
 using namespace systems::leal::campello_input;
+
+// ---------------------------------------------------------------------------
+// Virtual keyboard device that uses aggregate input
+// ---------------------------------------------------------------------------
+class AggregateKeyboard : public KeyboardDevice {
+    uint32_t _id;
+    std::string _name;
+    KeyboardState _state{};
+    IGameInput* _gameInput = nullptr;
+
+public:
+    AggregateKeyboard(uint32_t id, IGameInput* gameInput)
+        : _id(id)
+        , _name("System Keyboard")
+        , _gameInput(gameInput)
+    {
+        if (_gameInput) {
+            _gameInput->AddRef();
+        }
+    }
+
+    ~AggregateKeyboard() override {
+        if (_gameInput) {
+            _gameInput->Release();
+        }
+    }
+
+    // Device interface
+    DeviceType type() const noexcept override { return DeviceType::keyboard; }
+    uint32_t id() const noexcept override { return _id; }
+    const char* name() const noexcept override { return _name.c_str(); }
+    ConnectionStatus connectionStatus() const noexcept override { return ConnectionStatus::connected; }
+
+    // KeyboardDevice interface
+    bool isKeyDown(KeyCode code) const noexcept override {
+        uint32_t idx = static_cast<uint32_t>(code);
+        return (_state.keysDown[idx >> 6] >> (idx & 63)) & 1;
+    }
+
+    KeyModifier modifiers() const noexcept override {
+        return _state.modifiers;
+    }
+
+    void getState(KeyboardState& outState) const override {
+        outState = _state;
+    }
+
+    // Update from GameInput aggregate
+    void update() {
+        if (!_gameInput) return;
+
+        // Clear state for this frame
+        _state = KeyboardState{};
+
+        // Get current reading from aggregate (any keyboard)
+        IGameInputReading* reading = nullptr;
+        HRESULT hr = _gameInput->GetCurrentReading(GameInputKindKeyboard, nullptr, &reading);
+        
+        if (SUCCEEDED(hr) && reading) {
+            GameInputKeyState keyStates[16];
+            uint32_t requestedCount = 16;
+            uint32_t actualCount = reading->GetKeyState(requestedCount, keyStates);
+            
+            for (uint32_t i = 0; i < actualCount; ++i) {
+                KeyCode code = scanCodeToKeyCode(keyStates[i].scanCode);
+                if (code != KeyCode::unknown) {
+                    uint32_t idx = static_cast<uint32_t>(code);
+                    _state.keysDown[idx >> 6] |= 1ULL << (idx & 63);
+                    
+                    // Track modifiers
+                    updateModifiers(code);
+                }
+            }
+            reading->Release();
+        }
+    }
+
+private:
+    static KeyCode scanCodeToKeyCode(uint32_t scanCode) {
+        switch (scanCode) {
+            case 0x04: return KeyCode::a;
+            case 0x05: return KeyCode::b;
+            case 0x06: return KeyCode::c;
+            case 0x07: return KeyCode::d;
+            case 0x08: return KeyCode::e;
+            case 0x09: return KeyCode::f;
+            case 0x0A: return KeyCode::g;
+            case 0x0B: return KeyCode::h;
+            case 0x0C: return KeyCode::i;
+            case 0x0D: return KeyCode::j;
+            case 0x0E: return KeyCode::k;
+            case 0x0F: return KeyCode::l;
+            case 0x10: return KeyCode::m;
+            case 0x11: return KeyCode::n;
+            case 0x12: return KeyCode::o;
+            case 0x13: return KeyCode::p;
+            case 0x14: return KeyCode::q;
+            case 0x15: return KeyCode::r;
+            case 0x16: return KeyCode::s;
+            case 0x17: return KeyCode::t;
+            case 0x18: return KeyCode::u;
+            case 0x19: return KeyCode::v;
+            case 0x1A: return KeyCode::w;
+            case 0x1B: return KeyCode::x;
+            case 0x1C: return KeyCode::y;
+            case 0x1D: return KeyCode::z;
+            case 0x1E: return KeyCode::n1;
+            case 0x1F: return KeyCode::n2;
+            case 0x20: return KeyCode::n3;
+            case 0x21: return KeyCode::n4;
+            case 0x22: return KeyCode::n5;
+            case 0x23: return KeyCode::n6;
+            case 0x24: return KeyCode::n7;
+            case 0x25: return KeyCode::n8;
+            case 0x26: return KeyCode::n9;
+            case 0x27: return KeyCode::n0;
+            case 0x28: return KeyCode::enter;
+            case 0x29: return KeyCode::escape;
+            case 0x2A: return KeyCode::backspace;
+            case 0x2B: return KeyCode::tab;
+            case 0x2C: return KeyCode::space;
+            case 0xE1: return KeyCode::shift_left;
+            case 0xE5: return KeyCode::shift_right;
+            case 0xE0: return KeyCode::ctrl_left;
+            case 0xE4: return KeyCode::ctrl_right;
+            case 0xE2: return KeyCode::alt_left;
+            case 0xE6: return KeyCode::alt_right;
+            case 0xE3: return KeyCode::meta_left;
+            case 0xE7: return KeyCode::meta_right;
+            case 0x39: return KeyCode::caps_lock;
+            case 0x3A: return KeyCode::f1;
+            case 0x3B: return KeyCode::f2;
+            case 0x3C: return KeyCode::f3;
+            case 0x3D: return KeyCode::f4;
+            case 0x3E: return KeyCode::f5;
+            case 0x3F: return KeyCode::f6;
+            case 0x40: return KeyCode::f7;
+            case 0x41: return KeyCode::f8;
+            case 0x42: return KeyCode::f9;
+            case 0x43: return KeyCode::f10;
+            case 0x44: return KeyCode::f11;
+            case 0x45: return KeyCode::f12;
+            case 0x49: return KeyCode::insert;
+            case 0x4A: return KeyCode::home;
+            case 0x4B: return KeyCode::page_up;
+            case 0x4C: return KeyCode::del;
+            case 0x4D: return KeyCode::end;
+            case 0x4E: return KeyCode::page_down;
+            case 0x4F: return KeyCode::arrow_right;
+            case 0x50: return KeyCode::arrow_left;
+            case 0x51: return KeyCode::arrow_down;
+            case 0x52: return KeyCode::arrow_up;
+            case 0x53: return KeyCode::num_lock;
+            case 0x54: return KeyCode::numpad_divide;
+            case 0x55: return KeyCode::numpad_multiply;
+            case 0x56: return KeyCode::numpad_minus;
+            case 0x57: return KeyCode::numpad_plus;
+            case 0x58: return KeyCode::numpad_enter;
+            case 0x59: return KeyCode::numpad_1;
+            case 0x5A: return KeyCode::numpad_2;
+            case 0x5B: return KeyCode::numpad_3;
+            case 0x5C: return KeyCode::numpad_4;
+            case 0x5D: return KeyCode::numpad_5;
+            case 0x5E: return KeyCode::numpad_6;
+            case 0x5F: return KeyCode::numpad_7;
+            case 0x60: return KeyCode::numpad_8;
+            case 0x61: return KeyCode::numpad_9;
+            case 0x62: return KeyCode::numpad_0;
+            case 0x63: return KeyCode::numpad_decimal;
+            default: return KeyCode::unknown;
+        }
+    }
+
+    void updateModifiers(KeyCode code) {
+        switch (code) {
+            case KeyCode::shift_left:
+            case KeyCode::shift_right:
+                _state.modifiers = _state.modifiers | KeyModifier::shift;
+                break;
+            case KeyCode::ctrl_left:
+            case KeyCode::ctrl_right:
+                _state.modifiers = _state.modifiers | KeyModifier::ctrl;
+                break;
+            case KeyCode::alt_left:
+            case KeyCode::alt_right:
+                _state.modifiers = _state.modifiers | KeyModifier::alt;
+                break;
+            case KeyCode::meta_left:
+            case KeyCode::meta_right:
+                _state.modifiers = _state.modifiers | KeyModifier::meta;
+                break;
+            case KeyCode::caps_lock:
+                _state.modifiers = _state.modifiers | KeyModifier::caps_lock;
+                break;
+            case KeyCode::num_lock:
+                _state.modifiers = _state.modifiers | KeyModifier::num_lock;
+                break;
+            default:
+                break;
+        }
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Virtual mouse device that uses aggregate input
+// ---------------------------------------------------------------------------
+class AggregateMouse : public MouseDevice {
+    uint32_t _id;
+    std::string _name;
+    MouseState _state{};
+    IGameInput* _gameInput = nullptr;
+    bool _locked = false;
+    float _lastX = 0;
+    float _lastY = 0;
+    bool _hasLastPos = false;
+
+public:
+    AggregateMouse(uint32_t id, IGameInput* gameInput)
+        : _id(id)
+        , _name("System Mouse")
+        , _gameInput(gameInput)
+    {
+        if (_gameInput) {
+            _gameInput->AddRef();
+        }
+    }
+
+    ~AggregateMouse() override {
+        if (_gameInput) {
+            _gameInput->Release();
+        }
+    }
+
+    // Device interface
+    DeviceType type() const noexcept override { return DeviceType::mouse; }
+    uint32_t id() const noexcept override { return _id; }
+    const char* name() const noexcept override { return _name.c_str(); }
+    ConnectionStatus connectionStatus() const noexcept override { return ConnectionStatus::connected; }
+
+    // MouseDevice interface
+    void getState(MouseState& outState) const override {
+        outState = _state;
+    }
+
+    bool isButtonDown(MouseButton button) const noexcept override {
+        return (_state.buttons & (1u << static_cast<uint32_t>(button))) != 0;
+    }
+
+    void setCursorLocked(bool locked) override {
+        _locked = locked;
+    }
+
+    bool isCursorLocked() const noexcept override {
+        return _locked;
+    }
+
+    // Update from GameInput aggregate
+    void update() {
+        if (!_gameInput) return;
+
+        // Get current reading from aggregate (any mouse)
+        IGameInputReading* reading = nullptr;
+        HRESULT hr = _gameInput->GetCurrentReading(GameInputKindMouse, nullptr, &reading);
+        
+        if (SUCCEEDED(hr) && reading) {
+            GameInputMouseState mouseState;
+            if (reading->GetMouseState(&mouseState)) {
+                // Update position
+                float newX = static_cast<float>(mouseState.positionX);
+                float newY = static_cast<float>(mouseState.positionY);
+                
+                // Calculate delta
+                if (_hasLastPos) {
+                    _state.deltaX = newX - _lastX;
+                    _state.deltaY = newY - _lastY;
+                } else {
+                    _state.deltaX = 0;
+                    _state.deltaY = 0;
+                    _hasLastPos = true;
+                }
+                
+                _lastX = newX;
+                _lastY = newY;
+                _state.x = newX;
+                _state.y = newY;
+                
+                // Update wheel
+                _state.scrollX = static_cast<float>(mouseState.wheelX);
+                _state.scrollY = static_cast<float>(mouseState.wheelY);
+                
+                // Update buttons
+                _state.buttons = 0;
+                uint32_t buttons = static_cast<uint32_t>(mouseState.buttons);
+                
+                if (buttons & GameInputMouseLeftButton) {
+                    _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::left));
+                }
+                if (buttons & GameInputMouseRightButton) {
+                    _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::right));
+                }
+                if (buttons & GameInputMouseMiddleButton) {
+                    _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::middle));
+                }
+                if (buttons & GameInputMouseButton4) {
+                    _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::extra1));
+                }
+                if (buttons & GameInputMouseButton5) {
+                    _state.buttons |= (1u << static_cast<uint32_t>(MouseButton::extra2));
+                }
+                
+                _state.timestamp = reading->GetTimestamp();
+            }
+            reading->Release();
+        }
+    }
+
+    void resetDeltas() {
+        _state.deltaX = 0;
+        _state.deltaY = 0;
+        _state.scrollX = 0;
+        _state.scrollY = 0;
+    }
+};
 
 // ---------------------------------------------------------------------------
 // GdkInputSystem::Impl
@@ -40,13 +366,12 @@ struct GdkInputSystem::Impl {
     uint32_t nextDeviceId = 1;
     
     std::vector<std::unique_ptr<GdkGamepad>> gamepads;
-    std::unique_ptr<GdkKeyboard> keyboard;
-    std::unique_ptr<GdkMouse> mouse;
+    std::unique_ptr<AggregateKeyboard> keyboard;
+    std::unique_ptr<AggregateMouse> mouse;
     
     std::vector<DeviceObserver*> observers;
     
     ~Impl() {
-        // Release GameInput reference
         if (gameInput) {
             gameInput->Release();
             gameInput = nullptr;
@@ -60,20 +385,31 @@ struct GdkInputSystem::Impl {
             return false;
         }
         
-        // Perform initial device scan
-        scanForDevices();
+        // Always create aggregate keyboard and mouse devices
+        // These will receive input from any system keyboard/mouse
+        keyboard = std::make_unique<AggregateKeyboard>(nextDeviceId++, gameInput);
+        mouse = std::make_unique<AggregateMouse>(nextDeviceId++, gameInput);
+        
+        // Notify observers about keyboard and mouse
+        notifyDeviceConnected(*keyboard);
+        notifyDeviceConnected(*mouse);
+        
+        // Scan for gamepads
+        scanForGamepads();
         
         return true;
     }
     
-    void scanForDevices() {
+    void scanForGamepads() {
         if (!gameInput) return;
         
-        // Enumerate gamepads (GameInputKindGamepad)
-        IGameInputDevice* device = nullptr;
-        uint32_t deviceIndex = 0;
+        // Try to get a current reading for gamepad
+        IGameInputReading* reading = nullptr;
+        HRESULT hr = gameInput->GetCurrentReading(GameInputKindGamepad, nullptr, &reading);
         
-        while (gameInput->GetDeviceByIndex(GameInputKindGamepad, deviceIndex, &device) == S_OK) {
+        if (SUCCEEDED(hr) && reading) {
+            IGameInputDevice* device = nullptr;
+            reading->GetDevice(&device);
             if (device) {
                 // Check if we already have this device
                 bool exists = false;
@@ -87,46 +423,20 @@ struct GdkInputSystem::Impl {
                 if (!exists) {
                     auto gamepad = std::make_unique<GdkGamepad>(nextDeviceId++, device);
                     if (gamepad->initialize()) {
-                        notifyDeviceConnected(DeviceType::gamepad, gamepad.get());
+                        notifyDeviceConnected(*gamepad);
                         gamepads.push_back(std::move(gamepad));
                     }
                 }
                 device->Release();
             }
-            ++deviceIndex;
-        }
-        
-        // Enumerate keyboards (GameInputKindKeyboard)
-        if (!keyboard) {
-            if (gameInput->GetDeviceByIndex(GameInputKindKeyboard, 0, &device) == S_OK && device) {
-                keyboard = std::make_unique<GdkKeyboard>(nextDeviceId++, device);
-                if (keyboard->initialize()) {
-                    notifyDeviceConnected(DeviceType::keyboard, keyboard.get());
-                } else {
-                    keyboard.reset();
-                }
-                device->Release();
-            }
-        }
-        
-        // Enumerate mice (GameInputKindMouse)
-        if (!mouse) {
-            if (gameInput->GetDeviceByIndex(GameInputKindMouse, 0, &device) == S_OK && device) {
-                mouse = std::make_unique<GdkMouse>(nextDeviceId++, device);
-                if (mouse->initialize()) {
-                    notifyDeviceConnected(DeviceType::mouse, mouse.get());
-                } else {
-                    mouse.reset();
-                }
-                device->Release();
-            }
+            reading->Release();
         }
     }
     
     void updateDevices() {
         if (!gameInput) return;
         
-        // Get current reading for gamepads
+        // Update gamepads
         for (auto& gp : gamepads) {
             IGameInputReading* reading = nullptr;
             if (gameInput->GetCurrentReading(GameInputKindGamepad, gp->device(), &reading) == S_OK) {
@@ -137,44 +447,22 @@ struct GdkInputSystem::Impl {
             }
         }
         
-        // Update keyboard
+        // Update aggregate keyboard and mouse
         if (keyboard) {
-            IGameInputReading* reading = nullptr;
-            if (gameInput->GetCurrentReading(GameInputKindKeyboard, keyboard->device(), &reading) == S_OK) {
-                if (reading) {
-                    keyboard->updateState(reading);
-                    reading->Release();
-                }
-            }
+            keyboard->update();
         }
-        
-        // Update mouse
         if (mouse) {
-            IGameInputReading* reading = nullptr;
-            if (gameInput->GetCurrentReading(GameInputKindMouse, mouse->device(), &reading) == S_OK) {
-                if (reading) {
-                    mouse->updateState(reading);
-                    reading->Release();
-                }
-            }
+            mouse->update();
             mouse->resetDeltas();
         }
         
-        // Check for new devices (simple polling approach)
-        scanForDevices();
+        // Check for new gamepads
+        scanForGamepads();
     }
     
-    void notifyDeviceConnected(DeviceType type, InputDevice* device) {
-        DeviceInfo info;
-        info.id = device->id();
-        info.type = type;
-        info.name = device->name();
-        info.productName = device->productName();
-        info.manufacturer = device->manufacturer();
-        info.serialNumber = device->serialNumber();
-        
+    void notifyDeviceConnected(Device& device) {
         for (auto* observer : observers) {
-            observer->onDeviceConnected(info);
+            observer->onDeviceConnected(device);
         }
     }
 };
@@ -185,7 +473,7 @@ struct GdkInputSystem::Impl {
 
 GdkInputSystem::GdkInputSystem(const PlatformContext& ctx) 
     : pImpl(std::make_unique<Impl>()) {
-    (void)ctx;  // No context needed for GDK, uses global GameInput
+    (void)ctx;
     pImpl->initialize();
 }
 
@@ -201,27 +489,15 @@ void GdkInputSystem::addObserver(DeviceObserver* observer) {
         
         // Notify about existing devices
         for (auto& gp : pImpl->gamepads) {
-            DeviceInfo info;
-            info.id = gp->id();
-            info.type = DeviceType::gamepad;
-            info.name = gp->name();
-            observer->onDeviceConnected(info);
+            observer->onDeviceConnected(*gp);
         }
         
         if (pImpl->keyboard) {
-            DeviceInfo info;
-            info.id = pImpl->keyboard->id();
-            info.type = DeviceType::keyboard;
-            info.name = pImpl->keyboard->name();
-            observer->onDeviceConnected(info);
+            observer->onDeviceConnected(*pImpl->keyboard);
         }
         
         if (pImpl->mouse) {
-            DeviceInfo info;
-            info.id = pImpl->mouse->id();
-            info.type = DeviceType::mouse;
-            info.name = pImpl->mouse->name();
-            observer->onDeviceConnected(info);
+            observer->onDeviceConnected(*pImpl->mouse);
         }
     }
 }
