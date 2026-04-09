@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # macOS — build + test
+  # ---------------------------------------------------------------------------
+  build-macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: macos-gtest-${{ hashFiles('tests/CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # ---------------------------------------------------------------------------
+  # iOS — cross-compile only (tests cannot run on the runner)
+  # ---------------------------------------------------------------------------
+  build-ios:
+    name: iOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure
+        run: |
+          cmake -B build -S . \
+            -G Xcode \
+            -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 \
+            -DBUILD_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build --config Release -- -sdk iphonesimulator -arch arm64
+
+  # ---------------------------------------------------------------------------
+  # Linux — build + test
+  # NOTE: linux.cmake is currently broken (missing add_library call).
+  #       This job will expose that failure until it is fixed.
+  # ---------------------------------------------------------------------------
+  build-linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libevdev-dev libudev-dev
+
+      - uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: linux-gtest-${{ hashFiles('tests/CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # ---------------------------------------------------------------------------
+  # Android — build via the Gradle example project (handles AGDK / game-activity)
+  # ---------------------------------------------------------------------------
+  build-android:
+    name: Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: android-gradle-${{ hashFiles('examples/android/**/*.gradle*', 'examples/android/**/*.kts') }}
+          restore-keys: android-gradle-
+
+      - name: Build
+        working-directory: examples/android
+        run: ./gradlew assembleDebug --no-daemon
+
+  # ---------------------------------------------------------------------------
+  # Windows / Xbox GDK — build + test
+  # NOTE: GameInput (GDK) is not available on GitHub-hosted runners.
+  #       Configure will succeed; the link step requires a self-hosted runner
+  #       with the Microsoft GDK installed. The job is non-blocking until then.
+  # ---------------------------------------------------------------------------
+  build-windows:
+    name: Windows (GDK)
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: windows-gtest-${{ hashFiles('tests/CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
