@@ -5,6 +5,15 @@
 
 A cross-platform C++20 game input library supporting gamepads, keyboards, mice, touch, and haptics on macOS, iOS, Android, Windows, Linux, and game consoles.
 
+## 🚀 Part of the Campello Engine
+
+This project is a module within the **Campello** ecosystem.
+
+👉 Main repository: https://github.com/rusoleal/campello
+
+Campello is a modular, composable game engine built as a collection of independent libraries.
+Each module is designed to work standalone, but integrates seamlessly into the engine runtime.
+
 ## Platforms
 
 | OS | Underline API | Status |
